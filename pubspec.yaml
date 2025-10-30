@@ -1,0 +1,83 @@
+name: flutter_cicd_app
+description: FlutterForge - CI/CD Platform for Mobile (Codemagic Clone)
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # UI & Navigation
+  cupertino_icons: ^1.0.2
+  flutter_screenutil: ^5.9.0
+  go_router: ^13.0.0
+  material_design_icons_flutter: ^7.0.7296
+  
+  # State Management & Data
+  provider: ^6.1.1
+  http: ^1.1.0
+  shared_preferences: ^2.2.2
+  sqflite: ^2.3.0
+  path_provider: ^2.1.1
+  
+  # GitHub Integration
+  oauth2: ^2.0.0
+  dio: ^5.3.2
+  
+  # Real-time Updates
+  web_socket_channel: ^2.4.0
+  flutter_localizations:
+    sdk: flutter
+  intl: any
+  
+  # Charts & Analytics
+  fl_chart: ^0.66.0
+  
+  # Security & Authentication
+  crypto: ^3.0.3
+  local_auth: ^2.1.7
+  
+  # Notifications
+  firebase_messaging: ^14.7.10
+  flutter_local_notifications: ^16.3.0
+  flutter_launcher_icons: ^0.13.1
+  
+  # File Management
+  file_picker: ^6.1.1
+  permission_handler: ^11.0.1
+  path: ^1.8.3
+  
+  # Project Templates
+  json_annotation: ^4.8.1
+  
+  # Device Info
+  device_info_plus: ^9.1.0
+  package_info_plus: ^4.2.0
+  
+  # Build & DevTools
+  build_runner: ^2.4.7
+  json_serializable: ^6.7.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/data/
+  
+  fonts:
+    - family: Cairo
+      fonts:
+        - asset: assets/fonts/Cairo-Regular.ttf
+        - asset: assets/fonts/Cairo-Bold.ttf
+          weight: 700

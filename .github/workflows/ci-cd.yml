@@ -1,0 +1,214 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+env:
+  NODE_VERSION: '18'
+  REACT_APP_API_URL: ${{ secrets.API_URL || 'http://localhost:5000' }}
+
+jobs:
+  # Frontend Tests and Build
+  frontend:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+        
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm ci
+        
+    - name: Run frontend tests
+      run: |
+        cd frontend
+        npm test -- --coverage --watchAll=false
+        
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm run build
+      env:
+        REACT_APP_API_URL: ${{ env.REACT_APP_API_URL }}
+        
+    - name: Upload frontend artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-build
+        path: frontend/build/
+
+  # Backend Tests and Build
+  backend:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+        
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        npm ci
+        
+    - name: Run backend tests
+      run: |
+        cd backend
+        npm test
+      env:
+        NODE_ENV: test
+        JWT_SECRET: test-secret-key
+        DATABASE_URL: mongodb://localhost:27017/flutterforge_test
+        
+    - name: Build backend
+      run: |
+        cd backend
+        npm run build
+        
+    - name: Run linting
+      run: |
+        cd backend
+        npm run lint
+
+  # Security Scan
+  security:
+    runs-on: ubuntu-latest
+    needs: [frontend, backend]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run npm audit
+      run: |
+        # Frontend security scan
+        cd frontend
+        npm audit --audit-level moderate
+        
+        # Backend security scan
+        cd ../backend
+        npm audit --audit-level moderate
+
+  # Docker Build and Push
+  docker:
+    runs-on: ubuntu-latest
+    needs: [frontend, backend]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: |
+          flutterforge/backend:latest
+          flutterforge/backend:${{ github.sha }}
+        build-args: |
+          NODE_VERSION=${{ env.NODE_VERSION }}
+
+  # Deploy to Staging (if configured)
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: [frontend, backend, security]
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Deploy to staging
+      run: |
+        echo "Deploying to staging environment..."
+        # Add your staging deployment commands here
+        
+    - name: Run integration tests
+      run: |
+        echo "Running integration tests on staging..."
+        # Add integration test commands here
+
+  # Deploy to Production (main branch only)
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: [frontend, backend, security, docker]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Deploy to production
+      run: |
+        echo "Deploying to production environment..."
+        # Add your production deployment commands here
+        
+    - name: Run smoke tests
+      run: |
+        echo "Running smoke tests on production..."
+        # Add smoke test commands here
+        
+    - name: Notify deployment
+      if: success()
+      run: |
+        echo "✅ Deployment successful!"
+        # Add notification commands here (Slack, email, etc.)
+        
+    - name: Alert on failure
+      if: failure()
+      run: |
+        echo "❌ Deployment failed!"
+        # Add failure notification commands here
+
+  # Code Quality Check
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run ESLint
+      run: |
+        cd frontend
+        npx eslint src/
+        
+    - name: Check TypeScript
+      run: |
+        cd backend
+        npx tsc --noEmit
+        
+    - name: Code formatting check
+      run: |
+        npx prettier --check "**/*.{js,jsx,ts,tsx,json,css,md}"
